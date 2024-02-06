@@ -14,4 +14,9 @@ What does this mean for analysis of diffuse scattering? It means that you can no
 
 This means that analysis of diffuse scattering requires different tools from analysis of conventional Bragg scattering. ZMC is an attempt at a program to allow relatively ready implementation of a simulation of diffuse scattering from (particularly but not solely) molecular crystals. 
 
+Current status
+--------------
+
+I have some old binaries that seem to work on Windows and Linux, and I want to test them before I post them. The code is so old that some changes to gfortran mean a key module no longer compiles. I was hoping to fix that before I uploaded, but I might upload anyway. It compiles on older versions of the compiler (circa 2016), bit no longer.
+
 **More to come**
