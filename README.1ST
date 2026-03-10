@@ -1,0 +1,374 @@
+----------------------------------------------------------------------------
+ZMC, source distribution, README.1ST
+
+(1) Introduction
+(1a) Compiling
+(2) Installation
+(3) Running
+----------------------------------------------------------------------------
+(1) Introduction
+
+This archive source files for compiling ZMC on gfortran.
+It was developed on a Linux platform using Intel Fortran Compiler, 
+then ported to g95 and then gfortran. 
+
+Please refer to ZMC's built-in help, and to the incomplete manual 
+ZMC_handbook_incomplete.pdf and to the papers that use the program.
+
+All use should reference the paper:
+ D. J. Goossens, A. P. Heerdegen, E. J. Chan & T. R. Welberry, 'Monte
+ Carlo Modelling of Diffuse Scattering from Single Crystals: The 
+ Program ZMC' Metallurgical and Materials Transactions A, vol 42A, 
+ (2011) 23-31.  DOI:10.1007/s11661-010-0199-1
+
+Program was modified in 2026 to get it to comile and run under the then-current
+version of gfortran:
+
+GNU Fortran (Debian 14.2.0-19) 14.2.0
+Copyright (C) 2024 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+No guarantees/warranties are given or implied.  Use at
+your own risk.  Caveat emptor.  Buyer beware.
+
+Please see DISCLAIMER.TXT and COPYRIGHT.TXT for anything legal.
+
+And you get what you pay for...
+
+If you download and use this, please send me an email to let me know.
+
+darren.goossens@gmail.com
+
+06 April 2015
+07 March 2026
+
+----------------------------------------------------------------------------
+(1a) Compiling
+
+./compile_all_Linux_gfortran.sh
+
+and away you go.
+
+----------------------------------------------------------------------------
+(2) Installation
+
+Copy all the executable files into a subdirectory and put the subdirectory
+in your path.  Run the program from the system prompt.
+
+That is it.
+
+----------------------------------------------------------------------------
+(3) Running
+
+In the archive, you should find a /Simple_Simn directory.  It contains all the 
+files you need to run a very simple simulation, then calculate the diffuse
+scattering in three reciprocal space basal planes.
+
+Below is a minimal session running ZMC from the command line.
+
+(1) We run ZMC ($ indicates the command prompt).  
+The input file is MC_keywords.inp, 
+the output goes to Test1.extension, and the --diffuse flag means it is in a 
+format suitable for the DZMC program.
+
+(2) Then we run DZMC to produce the diffuse scattering, with the output going 
+into hk0_Test1 given that we are calculating the hk0 cut.
+
+(3) Then we convert the resulting binary file to a portable grey map (pgm) using bin2gray.
+
+NOTES:
+
+* The files below use very few MC cycles and very few lots; this is to make the 
+example fast, it does _not_ result in a useful simulation.
+
+** ZMC --help and ZMC --help2 both give some assistance.  Also bin2gray --help
+
+*** Other toolbox programs (zmat_maker, for example) are included, please 
+refer to their --help output.
+
+**** MOST IMPORTANT: This is _not_ production-ready software.  It is a toolbox 
+made by one scientist for his own use, and may have infelicities and problems.  
+I am happy to enter a dialogue about this (goossens@rsc.anu.edu.au) but please 
+remember I am one man and cannot always get back to you quickly.
+
+ ----------------------------------------------------------------------------
+ ----------------------------------------------------------------------------
+$ ZMC --diffuse MC_keywords.inp  Test1
+ ----------------------------------------------------------------------------
+ This is ZMC version dated July 18 2011, a program for implementing 
+ Monte Carlo simulations of crystal structures, primarily for the
+ analysis of diffuse scattering.
+  
+ All use should reference the paper:
+ D. J. Goossens, A. P. Heerdegen, E. J. Chan & T. R. Welberry, 'Monte
+ Carlo Modelling of Diffuse Scattering from Single Crystals: The 
+ Program ZMC' Metallurgical and Materials Transactions A, vol 42A, 
+ (2011) 23-31.  DOI:10.1007/s11661-010-0199-1
+  
+ Invoke it with ZMC --help for some help, and ZMC --help2 for more help.
+ ----------------------------------------------------------------------------
+ Input file is MC_keywords.inp
+ ----------------------------------------------------------------------------
+ Output files have root name Test1.
+ ----------------------------------------------------------------------------
+ Cell parameters are:   5.0270  5.3600  7.3820115.7200101.0600 92.9100
+ ----------------------------------------------------------------------------
+ Value for NUMLOCS specified explicitly is:            1
+ ----------------------------------------------------------------------------
+ Value for NUMZMATS specified explicitly is:            1
+ ----------------------------------------------------------------------------
+ Number of z-matrix files to read:     1
+ Reading z-matrix   1 of   1 from :                  reordered_1e.zmat
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+TEPHTH12 : Generated from the CSD
+    19
+x1        0   0.00000    0     0.00000    0     0.00000
+C1        1   1.38324    0     0.00000    0     0.00000
+C2        2   1.39149    1    60.22241    0     0.00000
+C3a       3   1.38753    2   119.79829    1     0.00606
+C1a       4   1.39035    3   119.63299    2    -0.01204
+C2a       5   1.39149    4   120.56871    3     0.01214
+C3        6   1.38753    5   119.79829    4    -0.01216
+C4        2   1.48323    7   119.89217    3  -179.92017
+O1        8   1.25201    2   119.22657    7   177.39421
+O2        8   1.28044    9   123.57618    2   179.87281
+C4a       5   1.48323    6   119.53907    4  -179.92047
+O2a      11   1.28044    5   117.19713    6  -177.59235
+O1a      11   1.25201   12   123.57618    5   179.87520
+H2A      12   0.93017   11   112.74720   13     1.41090
+H4A       4   0.94111    5   120.58241    3   179.89873
+H3A       6   0.97107    7   118.54591    5   177.87198
+H2       10   0.93017    8   112.74720    9    -1.41090
+H3        3   0.97107    4   118.54591    2  -177.87198
+H4        7   0.94111    6   119.78451    2   179.89956
+ ----------------------------------------------------------------------------
+ Interrogation of qxyz files suggests there are    1 locations in unit cell.
+ Value for NUMINTERNAL not specified explicitly
+ for one or more z-matrices.
+ Will try to work it out from other inputs.
+ ----------------------------------------------------------------------------
+ Crystal size is:     32    32    32
+ ----------------------------------------------------------------------------
+ No occupancy file given.  Will try to work out
+ whether one is needed from QXYZ files.
+ ----------------------------------------------------------------------------
+ Occupancy structure worked out from QXYZ files.
+ Unless there is an error this means there is no occupancy disorder.
+ ----------------------------------------------------------------------------
+ Constructing crystal
+ Molecule type (z-matrix number):   1
+ Initial widths for x,y,z are               0.25000  0.25000  0.25000
+ Initial widths for q1,q2,q3,q4 are         0.01000  0.01000  0.01000  0.01000
+ ----------------------------------------------------------------------------
+ Quaternions and translations for z-matrix    1
+ are in file reordered_1e.qxyz
+ 
+                     Location):    1
+  Sub structure (per location):    1
+                    Quaternion:    0.797271   0.078913  -0.389459  -0.454371
+                      Improper:    F
+               COM Translation:    0.000000   0.000000   0.000000
+ ----------------------------------------------------------------------------
+ Interrogation of qxyz files suggests there are
+ up to    1 instances of a z-matrix on a location.
+ ----------------------------------------------------------------------------
+ Model crystal populated.
+ ----------------------------------------------------------------------------
+ Header of contact vector file terephthalic_contacts_2 is... 
+# ol  oz  om  oat da  db  dc  dl  dz  dm  dat      dist     type                                    
+ Contact vector file has     26 rows.
+ ----------------------------------------------------------------------------
+ Contact vector file contains   8 contact vector types.
+ ----------------------------------------------------------------------------
+ Molecule type (z-matrix number):   1
+ For  MC widths for x,y,z are               0.25000  0.25000  0.25000
+ For  MC widths for q1,q2,q3,q4 are         0.01000  0.01000  0.01000  0.01000
+ ----------------------------------------------------------------------------
+ Value for MCCYCLES specified explicitly is:          10
+ ----------------------------------------------------------------------------
+ Value for TEMPERATURE specified explicitly is:    1.000000    
+ ----------------------------------------------------------------------------
+ Value for INCUPDATE specified explicitly is:            1
+ ----------------------------------------------------------------------------
+ Values for         BADJUST specified explicitly are:     1  2.00000
+ ----------------------------------------------------------------------------
+ Value for NUMINSPRCON not specified explicitly.
+ ----------------------------------------------------------------------------
+ Value for NUMSPRCON not specified explicitly.
+ ----------------------------------------------------------------------------
+ Contact type:    1  Sprcon: 100.000  Size effect:   0.000
+ Contact type:    2  Sprcon:   1.000  Size effect:   0.000
+ Contact type:    3  Sprcon:   1.000  Size effect:   0.000
+ Contact type:    4  Sprcon:   1.000  Size effect:   0.000
+ Contact type:    5  Sprcon:   1.000  Size effect:   0.000
+ Contact type:    6  Sprcon:   1.000  Size effect:   0.000
+ Contact type:    7  Sprcon:   1.000  Size effect:   0.000
+ Contact type:    8  Sprcon:   1.000  Size effect:   0.000
+ ----------------------------------------------------------------------------
+ ----------------------------------------------------------------------------
+ Value for NUMCROSS not specified explicitly
+ for one or more z-matrices.
+ Will try to work it out from other inputs.
+ ----------------------------------------------------------------------------
+ Initialisation completed.
+ ----------------------------------------------------------------------------
+ Header of input file is:
+ Terephthalic acid; Emma's model E in in ZMC2
+ ----------------------------------------------------------------------------
+  %done: 10.0
+  acc:   13183, up:    2997, rej:   16588, R/T: 0.51
+ B_aim, B_current :   2.000000       1.725884    
+  %done: 20.0
+  acc:   12816, up:    4272, rej:   15680, R/T: 0.48
+ B_aim, B_current :   2.000000       1.739106    
+  %done: 30.0
+  acc:   12882, up:    5758, rej:   14128, R/T: 0.43
+ B_aim, B_current :   2.000000       1.744740    
+  %done: 40.0
+  acc:   12591, up:    7060, rej:   13117, R/T: 0.40
+ B_aim, B_current :   2.000000       1.767216    
+  %done: 50.0
+  acc:   12512, up:    8132, rej:   12124, R/T: 0.37
+ B_aim, B_current :   2.000000       1.799040    
+  %done: 60.0
+  acc:   12741, up:    9046, rej:   10981, R/T: 0.34
+ B_aim, B_current :   2.000000       1.825201    
+  %done: 70.0
+  acc:   12675, up:    9553, rej:   10540, R/T: 0.32
+ B_aim, B_current :   2.000000       1.848830    
+  %done: 80.0
+  acc:   12113, up:   10083, rej:   10572, R/T: 0.32
+ B_aim, B_current :   2.000000       1.889348    
+  %done: 90.0
+  acc:   11325, up:   10003, rej:   11440, R/T: 0.35
+ B_aim, B_current :   2.000000       1.952810    
+  %done:100.0
+ ----------------------------------------------------------------------------
+ Molecule type (z-matrix number):   1
+ Widths for increments on x,y,z are         0.08042  0.25097  0.09065
+ Widths for increments on q1,q2,q3,q4 are   0.01250  0.00328  0.01953  0.06397
+ No internal d.f.
+ ----------------------------------------------------------------------------
+ Globally scaled intermolecular spring constants are:
+           1   79.52365    
+           2  0.7952365    
+           3  0.7952365    
+           4  0.7952365    
+           5  0.7952365    
+           6  0.7952365    
+           7  0.7952365    
+           8  0.7952365    
+ ----------------------------------------------------------------------------
+ Writing file for DIFFUSE calculation Test1.diffuse
+ Location    1 can have    1 type(s) of z-matrix(ices).
+ These are types           1
+ Type    1 is in    1 orientation(s) on that location.
+ These are orientation(s):    1
+ ----------------------------------------------------------------------------
+ Possible atom sites:          18
+ Of which at most          18  can be occupied.
+ Exiting normally.
+ ----------------------------------------------------------------------------
+$ DZMC Test1.diffuse 
+  
+ DIFFUSE -  Ver. 2.1a  - May 11, 1995
+  
+ diffuse.in filename?
+diffuse.hk0
+ 
+  
+   The computation volume is defined by:
+     ( -4.00, -4.50,  0.00) => (  4.43, -4.50,  0.00)
+     ( -4.00, -4.50,  0.00) => ( -4.43,  4.50,  0.00)
+     ( -4.00, -4.50,  0.00) => ( -4.00, -4.50,  0.00)
+   Image size is          400  X          400  X            1
+   sin(theta)/lambda maximum =   0.6870000    
+   Random number seeds are:        12645        9676
+   Crystal size is:           32          32          32
+   Periodic boundary? Y
+   Number of atom sites per cell :           18
+   Number of Atom types:            3
+   Lot Size is:            9           9           6
+   Number of Lots to Compute:            3
+   Subtract Average Lattice? e
+  
+ intensity file?
+hk0_Test1
+hk0_Test1                       
+   Average Structure ...
+    Site #            1  :
+ ----------------------------------------------------------------------------
+ Reading in MC crystal from file Test1.diffuse
+ Crystal dimensions are:           32          32          32
+ There are           18  sites in the unit cell.
+ Of which at most           18  can be occupied at once.
+ ----------------------------------------------------------------------------
+      C   atom at (-0.142 0.148 0.146), xocc =  1.00, Biso =  2.084
+    Site #            2  :
+      C   atom at ( 0.020-0.040 0.176), xocc =  1.00, Biso =  2.090
+    Site #            3  :
+      C   atom at ( 0.162-0.188 0.029), xocc =  1.00, Biso =  2.168
+    Site #            4  :
+      C   atom at ( 0.142-0.148-0.146), xocc =  1.00, Biso =  2.080
+    Site #            5  :
+      C   atom at (-0.021 0.039-0.176), xocc =  1.00, Biso =  2.091
+    Site #            6  :
+      C   atom at (-0.163 0.188-0.030), xocc =  1.00, Biso =  2.174
+    Site #            7  :
+      C   atom at (-0.293 0.306 0.303), xocc =  1.00, Biso =  2.283
+    Site #            8  :
+      O   atom at (-0.281 0.261 0.457), xocc =  1.00, Biso =  2.300
+    Site #            9  :
+      O   atom at (-0.432 0.484 0.272), xocc =  1.00, Biso =  2.671
+    Site #           10  :
+      C   atom at ( 0.293-0.306-0.304), xocc =  1.00, Biso =  2.274
+    Site #           11  :
+      O   atom at ( 0.432-0.484-0.273), xocc =  1.00, Biso =  2.656
+    Site #           12  :
+      O   atom at ( 0.281-0.261-0.457), xocc =  1.00, Biso =  2.292
+    Site #           13  :
+      H   atom at ( 0.525-0.572-0.375), xocc =  1.00, Biso =  2.907
+    Site #           14  :
+      H   atom at ( 0.272-0.315 0.049), xocc =  1.00, Biso =  2.436
+    Site #           15  :
+      H   atom at (-0.042 0.065-0.300), xocc =  1.00, Biso =  2.223
+    Site #           16  :
+      H   atom at (-0.526 0.572 0.375), xocc =  1.00, Biso =  2.924
+    Site #           17  :
+      H   atom at ( 0.042-0.065 0.300), xocc =  1.00, Biso =  2.222
+    Site #           18  :
+      H   atom at (-0.272 0.315-0.050), xocc =  1.00, Biso =  2.445
+   
+   --------------------------
+   Reciprocal plane #            1
+   --------------------------
+   Average Scattering from 5% of Crystal ...
+  
+   All done!
+  
+$ bin2gray hk0_Test1
+ File hk0_Test1 opened and irlen = 1600
+ 
+ ---------------------------------------------------
+ 
+ ---------------------------------------------------
+ 
+   The computation volume is defined by:
+     (  -4.00,  -4.50,   0.00) => (   4.43,  -4.50,   0.00)
+     (  -4.00,  -4.50,   0.00) => (  -4.43,   4.50,   0.00)
+     (  -4.00,  -4.50,   0.00) => (  -4.00,  -4.50,   0.00)
+   Image size is 400 X 400 X 1
+   sin(theta)/lambda maximum =   0.6870000    
+   Crystal size is:     32  32  32
+   Lot Size is:         9  9  6
+   Number of Lots Computed: 3
+   Subtract Average Lattice? e
+  
+  Working on plane # 1/1 ...
+     Range =    5.868739E-03  =>    603.9745    
+     Mean , STD  =    16.2323654321304        40.7605447194312     
+     Normalizing to    65535.00    
+ Writing pgm hk0_Test1.pgm
+$ 
+

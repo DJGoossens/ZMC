@@ -1,0 +1,808 @@
+!----------------------------------------------------------------------------!
+! This file documents the development of ZMC in reverse chronological order.   
+! It is NOT a user manual.  Use ZMC --help and ZMC --help2 to get some initial
+! assistance.  Proper documentation may one day exist.
+!
+!----------------------------------------------------------------------------!
+! Mar 08   2026: Some of Aidan's code for handling keywords was not robust,
+!                and as gFortran has evolved, fewer undefined cases are permitted,
+!                so that it stopped compiling, or if it did cmopile it gave seg
+!                faults. For example, some fixes required breaking and AND into
+!                two IFS, because the second condition was undefined if the first 
+!                was not true. In the past, gfort would have stopped after the first
+!                was not true, but it seems that it is now evaluating them at the
+!                same time (which has obvs. speed advantages) but it means that if 
+!                the first condition is not true, and the second is undefined if the first
+!                is not true, you have a bug.
+!
+!                There were other issues that were fixed by allocating arrays within
+!                subroutines but not within the declaration. zmat2mol2 and zmat2xyz 
+!                still do not compile, and if needed binaries should be extracted from
+!                the old archives. I find the code obscure (why use pointers in Fortran,
+!                why? Why import the worst feature of C?), and not easy to fix.
+!
+!          2015: A little cleaning up of code.
+!
+! Mar 20   2014: At prompting of Eric Chan, noted that ZMC is distributed under the
+!                Academic Free License version 3.0 (http://opensource.org/licenses/AFL-3.0)
+!                
+! Jun 28   2013: Add note to DISCUS output section for user to manually add ncells.
+!                DISCUS output is now mentioned in the help... use at own risk!    
+!                
+! Aug 24   2012: Increase text field sizes in some file outputs in case lots 
+!                of contacts; modify some 'if' statements in peanut() and pairs().
+!                Add note to DISCUS output section for user to manually add ncells.
+!
+! Aug 08   2012: Moved allocate(new_coords) to inside the loops, even if a speed 
+!                penalty, because g95 on Windows (and maybe elsewhere) does not
+!                like putting a wrong-sized array into az_xyz() zmatrix routine.
+!
+! Aug 06   2012: ADDED THIS NOTE: ZMC/flat contains all files for a 'simple' flat
+!                compile that does not need libraries; for use in porting to
+!                environments w/o Aidan Heerdegen's modules library.
+!
+! May 11   2012: Need three chars in plot output for contact number. DISCUS output
+!                improved.
+!
+! April 02 2012: DISCUS routine clearly does not work.  Testing it and hopefully    
+!                fixing it...                                                       
+!
+! March 30 2012: Adding powder diffraction .mac file to DISCUS output; still       
+!                leaving it undocumented, though...                                 
+!
+! July 18  2011: invals_ge() was an integer array and should have been real -- do'h!
+!
+! July 15  2011: Seem to be major issues with handling internal d.f. values...
+!                Trying to fix!
+!
+! June 03  2011: Modifying the help text a little for ININITW and the like to reflect
+!                what the program dose rather than what I wanted it to do.          
+!
+! April 20 2011: Compiling under g95 using -Wall and fixing as many errors as poss.
+!                and by using 'use only' have got it to compile on mac using g95
+!
+! April 19 2011: Remove redundant use commands.  Also rename
+!                'lookup' in readat() to look_up to remove namespace clashes.   
+!
+! April 11 2011: Increased field width on output of contact vector list from  
+!                --getcontacts.  Remove junk form file already exists warning.
+!
+! March 08 2011: Minor tweaks to outputs.  Major change is implementing DISCUS
+!                 output; thanks to Ross Whitfield for some info on this.
+!
+! March 12 2010: Eric has found some problems I need to fix.
+!  (1) Trailing rubbish in HEADER -- fixed by initialising string explicitly.
+!  (2) Issues with numbers of locations/molecules...proved to be issue with his
+!  .qxyz file not have enough white space to define the fields -- 'F-0.12345' needed
+! to be changed to 'F -0.12345' to enable ZMC to read in the field properly.  Fed
+! this back to Aidan Heerdegen (aidan@rsc.anu.edu.au) who modified the zmat_maker
+! program that produces the .qxyz file.
+!  (3) He found that .zmat and .qxyz files cannot begin with a number but should begin
+! with an alphabetical character.  Rather than mess around with the string manipulation
+! stuff, I have just put a few words to this effect in the --help2 routine.
+!
+! Feb 24 2010; B-adjust does not seem to work...??? Or is it incupdate? Or are
+! they interacting badly? Trying them independently... first B_adjust...
+! B_adjust seems to have a major issue...
+! Try putting limits on amount of shift allowed... Seems to still have
+! problems. How is it different to old version, which was (pretty) bulletproof?
+! Anyway, seems mostly fixed, lets try incupdate on its own...
+! ...seems OK.
+! Run both at once again...but with no internals at all...
+!
+! Jan 04 2010; getting contacts not working with lots of z-mats.  I think it is now
+! fixed, plus a couple of minor things.
+!
+! December 26 2009: If succeeding zmatrix filename is longer than previous,
+! the string seems to contain new name plus leftover characters from old.
+! Attempt to fix this... Done by resetting buffer string.
+!
+! December 03 2009: Minor cosmetic tweaks.                                        
+!
+! November 26 2009: Needed to make some minor modifications to make it compile on
+! g95 on the Mac; also still compiles on ifc on Linux Intel.  New version
+! is called zmc_Oct14_2009_DJG.f90. Updated cver version string.
+!
+! October 14 2009.  new version now has all subroutines in one of two modules
+! in the preamble of the code.  Runs about 20% slower than the old version,
+! where the old version did not use allocatable arrays or global variables.
+! 
+! 70+% of the runtime is spent inside the get_energy() subroutine, and
+! changing it to use dummy arguments rather than global variables did not
+! make it run any faster.  wrap() array could not be passed in as dummy
+! argument and declared with colons (wrap(::)) because its indices are negative
+! as well as positive.  
+!
+! All comments pertain to ifc compiler version 7.1.
+!
+! I am assuming that there is some overhead in using allocatable arrays, and
+! that perhaps using global variables messes with the compiler's ability
+! to optimise the code.  But, as noted, passing the arrays to get_energy()
+! does not seem to help.
+!
+! As of Oct 14 2009, I am 'freezing' the current version as a 'production'
+! version.  Any new changes other than bug fixes  will happen to a 'development' branch.
+!
+! These changes may include more attempts to increase speed (reducing use of
+! global variables, changing wrap() to be a fixed but very big array to allow
+! get_energy() to be an external subroutine with NO globals in it; etc).
+!
+! The main functionality that might be added is a subroutine to output files
+! that can be used by DISCUS to calculate the diffuse scattering.  There is 
+! a 'placeholder' version of this in the program as of now.
+!
+!----------------------------------------------------------------------------!
+! October 2009: New version seems to behave properly now relative to the
+! old version, in that it puts out the correct sorts of results
+! (if not better!) Problem seemed to lie in how the fractional coordinates
+! were calculated and then written out to the 'diffuse' file, which is why
+! the old diffuse worked with the new simulation but the new diffuse did not.
+!
+! BUT now remains the problem of why the new version is so slow!!!
+!
+! I do not really want to un-global everything, but I think perhaps
+! I must.  I will first unglobal everything inside the MC routine.  BUT
+! since this will call some routines which use variables which are global
+! to other routines, if there is some change in their 'basic nature'
+! to allow them to be global, it will still persist and not fix the problem.
+!
+! October 13 version is pre-de-globalisation, and is compiled to ZMCglobal.
+!
+! 
+!----------------------------------------------------------------------------!
+!
+! Problem in output to new 'diffuse' file format.  Should change format of file
+! I think!
+! OK, it does not seem to work, since I ran it and then tried to diffuse the
+! output in the old diffuse and it did not work.
+!
+! Repeat, both old and new, with 500 cycles and rigid molecule and compare.
+! Also, output histograms
+!
+! One thing to note: The output seems identical   as the simulation is running
+! -- for example at 0.7% done both show Biso = 9.477087, same acc/rej stats
+! as well.  So end results SHOULD be the same...
+! Biso identical to better than 1% as well.  Problem seems to lie in the
+! handling of the internals -- and inside the MC not just on write out.
+! Small differences between newMC/newDiffuse and oldMC/old Diffuse for rigid.
+! Currently running newMC/oldDiffuse.  But differences seem small.  Does seem
+! like problem is internals.
+!
+! Now, put in internal and just do 1 MC cycle.
+! ***
+! OK, had reversed indices in interns(), so that seems OK.  now; new version
+! seems to be almost 50% slower!
+!
+! Old, 501 cycles, 1 internal: user: 16m13.020s
+! New,                               27m43  (!!!!!)
+!
+! Repeat test doing 51 cycles on trw5, and on Mac using g95.
+!
+!  On trw5: new, 51 cyc: 5m37
+!           old          4m 3 s
+!
+!What is the story?  Only real difference us that old version uses verbose
+!subroutine calls...
+!
+! Use old gettweak makes not a jot of difference. (5m 39)
+!
+! Try commenting out some text output.(% done at end of each loop): 5.37
+!
+! try running w/o incupdate, w/o badjust, one at a time, and see what makes a
+! difference>
+!
+!  Old simn w/o B_adjust: 4m0s
+!  New simn               5.33
+!
+! No incupdate, no Baim: old:
+!                        new: 5.33
+!
+! So those make not diff.  What is we comment out the energy calc?  Just set E =
+! 4 or something?
+!                    new:  1.30
+!
+! OK, most time is spent in Energy calc. 
+!
+! Disable prefetch -- no diff
+!
+! Use old energy calc with big call with lots of dummy arguments: time = 5m17
+!
+! Try using g95...
+!
+! In new, look for: arrays allocated and deallocated inside MC loop
+!                   frequency of calls to incupdate, Biso
+!                   effect of output to screen (extra if at end of ic2 loop)
+!                   rvar is now an array...?
+!
+! As of aug13, it has a problem -- at the least, it appears that the internals
+! are not appearing in the output file; but more to the point they appear to be
+! not occurring in the MC...?  I don't know what is wrong.
+!
+! The OLD output file converted into the new format and run in the new
+! diffuse gives wrong answers.  Need to see if new version diffuse'd in old
+! gives right or wrong answers, to see where the error lies.  Assuming new
+! version MC gives a file which gives bad diff pat in old readat, then problem
+! is in the new MC.  If new MC gives file that gives good diffpart in old
+! readat, problem in is new readat or in part of new mc that writes out the file
+! that goes into new readat.  
+! The internal is getting written to the 'crystal' output file; is there a
+! problem with the filling of the carts array?
+!
+! Note that one thing to try would be to do the xyz conversion when writing out
+! the diffuse file,rather than just writing out the carts() array...
+!
+!------------------------------------------------------------------------------!
+!
+!  This is ZMC, Monte Carlo program for modelling diffuse scattering from 
+!  crystals.  Version is in string variable cver.
+!
+!  Detailed development history is in file zmc_documentation.txt
+!
+!  Written by D.J.Goossens, goossens@rsc.anu.edu.au
+!
+!  Uses module library provided by A.P.Heerdegen, aidan@rsc.anu.edu.au
+!
+!------------------------------------------------------------------------------!
+
+  !------------------------------------------------------------------------------!
+  !------------------------------------------------------------------------------!
+!---------------------------------------------------------------------------------------------!
+! Aug  10  2009: Remove commented out stuff into file 'zmc_documentation', or cut it          !
+!  completely.  Put longusage() text into program not file.  Etc.                             !
+!---------------------------------------------------------------------------------------------!
+! Aug  06  2009: At the moment the --diffuse file is an ascii file, though I may make it      !
+! binary.  The --discus option is not implemented.                                            !
+!---------------------------------------------------------------------------------------------!
+! Aug  05  2009: First thing is to make writecrystal only work if you ask it to.              !
+! As for .diffuse file, it should have a header with lots of info, plus a body with the       !
+! data.  Now, header will need simsize.  Max number of possible atoms sites in cell and       !
+! max number of occupied sites in cell.  These are for array allocations.  Then we need an    !
+! array to translate.  Call it correspond(a,b,c,100)          For example, if we have a       !
+! system in which we have 100 possible sites in the unit cell, but only 25 are occupied       !
+! at a time, then we would put these numbers in the header.  Further, we would have an        !
+! array of size a,b,c,100 whose values are the indices of the arrays with the labels and      !
+! x,y,z coords in.  Then we would have other arrays x(a,b,c,25) etc which we would look       !
+! at.  If we get passed in i,j,k,75, then we go to correspond().  If that cell is a zero,     !
+! then atom site 75 is unoccupied in cell i,j,k and react accordingly.  If it is a number,    !
+! say N, then x = x(i,j,k,N) etc and pass these values back to DIFFUSE.  Simple!              !
+! This suggests that what we need to do is (1) Work out number of possible sites in a cell.   !
+! (2) Work out the maximum number of sites that can be occupied in a cell.                    !
+! (3) Write these things and simsize() to the output file.                                    !
+! (4) Loopover the POSSIBLE sites in the cell (by looping over locations then possible        !
+!     z-matrix then possible orientations) and increment a counter n for each non-dummy atom. !
+!     Before doing this, set correspond() to zeroes; then, when on a site which IS occupied   !
+!     increment a second counter, m, and set correspond(i,j,k,n) = m.  Then set               !
+!     x(i,j,k,m), y, z and label() as well, so that they can be accessed by using             !
+!     x(i,j,k,correspond(i,j,k,n)) for example.  Then, when doing readat() it is simply       !
+!     that if correspond(i,j,k,isite)=0, it is unoccupied.  If .ne.0, then get label and      !
+!     compare to type passed in.  If agreement, set the flag, set x,y,z and get out. Easy!    !
+!---------------------------------------------------------------------------------------------!
+! Aug  03  2009: Need to sort out numbering of molecules -- needs a new arrays during init.   !
+! Also, should also write out a file easy for diffuse to read.  Call it Outfile.diffuse       !
+! and write it out by default.  Then can write a very simple readat!!!  Stupid! File just     !
+! needs to look like ia ib ic type x y z, that is all!  Look at writefrac; just need to       !
+! add in the overall site number and the atom label.  Just use getcartsr() from old readat.   !
+! Aidan recommends binary to minimise file size.  Also, will need site number for each        !
+! atom (i.e., line would look like site, label, x, y, z.  Could write in blocks, one block    !
+! per unit cell to avoid a, b, c at start of every line.  This is still derivable from        !
+! readat().  ALSO should make choice of output optional.  Optional is good because during     !
+! automatic refinement, no need for 'conventional' output files.  Flags would be:             !
+! --diffuse output a file suitable for the readat() that I will write to go with it.          !
+! --discus will, when and if written, output a file suitable for the discuss/diffuse suite.   !
+! --crystal will output the current format.  One of these three must be given and you can     !
+! also give a filename if you want.  If you don't, program will take the keyword filename and !
+! change (or add) the extension .diffuse, .discuss and/or .crystal.                           !
+! Update help().                                                                              !
+!---------------------------------------------------------------------------------------------!
+! July 27  2009: Next thing is to put subroutines into a module as best I can.                !
+!---------------------------------------------------------------------------------------------!
+! July 17c 2009: Rejection ratio stuff fixed.  Program assumes 9 or fewer internals in a      !
+!                z-matrix.  This may need to be rethought.                                    !
+!                help2 (longusage) implemented. Really, this leaves READAT.                   !
+!---------------------------------------------------------------------------------------------!
+! July 17b 2009: Rejection ratio stuff not quite working. Note assumes 9 or fewer internals!  !
+!---------------------------------------------------------------------------------------------!
+! July  17 2009: Don't bother about updated keyword file; only a few numbers will change and  !
+! the user can update them by hand easily enough.  What I need to do now is:                  !
+! (1) All initialisation common to the three sections --plot, --getcontacts and MC            !
+!     needs to be moved to in front of the 'if' statements to reduce repetition.              !
+! (2) The old subroutines that are not used any more need to be excised.                      !
+! (3) More of he output needs to be converted to fixed format to remove compiler dependence.  !
+! (4) Should add 'ZMAT' word to the 'width' statements in the keyword file.                   !
+! (5) Need to write the new readat()                                                          !
+! (6) Need to write usage2().  This will be instructions on the keywords.                     !
+!                                                                                             !
+! Things that are not going to change:                                                        !
+! (1) I am not going to generate a new keyword file at the end.  That is not that much work   !
+!     for the user.                                                                           !
+! (2) I am not going to substantially alter the subroutines that interrogate the model unless !
+!     a bug turns up; Eric thinks there is on in 'peanuts'.                                   !
+!                                                                                             !
+! Things that I might do:                                                                     !
+! (1) Alternative potentials.                                                                 !
+! (2) More routines to run at end (calculate powder pattern?  PDF? Output to run in DISCUS?)  !
+!---------------------------------------------------------------------------------------------!
+! July  15 2009: It works!  Now I need to remove repetition and tidy the output and get it    !
+! to write out a new updated keyword file at the end (if adjcy or badjcy has been set)        !
+!---------------------------------------------------------------------------------------------!
+! July  10 2009: Plotting and contact generation routines now work.  Still very separated     !
+! and need to be better integrated; and also get keyfile off command line.                    !
+!---------------------------------------------------------------------------------------------!
+! July  09 2009: As below; MUST review use of division and of trim().                         !
+! But as of now, the plotting works, which means most numbers for the geometry are being      !
+! read in correctly, and now we can start either putting in the MC numbers OR implementing    !
+! the contact-finding component of the program.                                               !
+! Need to work out what requirements are needed by ALL options and what are needed only by    !
+! certain applications of the program -- e.g. getting contacts does not need contact list!    !
+! I think the best way is to have all separate sections like I have done with the plotting    !
+! bit, then merge them afterwards.                                                            !
+! Also, wrap whole plotting bit up in a subroutine to get it out of the main body.            !
+!---------------------------------------------------------------------------------------------!
+! July  06 2009: Implement keywords.  Got some more to work.                                  !
+! Still want to put commands in keyfile also think about reading a new keyword file out at`   !
+! the end -- good if they have updated sprcon and/or widths.  Also, could allow (some)    `   !
+! Other note: Should think about optimising for speed; avoid squareds, avoid divisions when   !
+! can define variable one_on_x = 1.0/x  then multiply by one_on_x. Avoid roots if possible.   !
+!---------------------------------------------------------------------------------------------!
+! June  30 2009: Implement keywords.  Got some others to work; deciding to use numbers        !
+! instead of labels in zmatrix read in; also think about reading a new keyword file out at`   !
+! the end -- good if they have updated sprcon and/or widths.  Also, could allow (some)    `   !
+! command line options to be also given as keywords, just to neaten up the command line.  `   !
+! EG: Put PLOT in keyword file if you want to plot, or QUIET if you want to reduce output.`   !
+! NOTE that has_value is used for command line options AND keywords.  Could be causing a prob.!
+!---------------------------------------------------------------------------------------------!
+! June  26 2009: Implement keywords.  Got simsize() to work!  Hooray!                         !
+!---------------------------------------------------------------------------------------------!
+! June  12 2009: Implement keywords.  This is tricky.  First, some keywords are needed or     !
+! not depending on the command line options.  Hence, there needs to be some testing           !
+! when command line option is recognised.  For example, if --plot is on the command line,     !
+! then number of MC cycles is not needed, but the geometric information IS needed.            !
+! there are a couple of ways to deal with this. One would be to handball off to a specific    !
+! subroutine that only reads in the needed keywords, and which then calls the other           !
+! needed subroutines and then, in this case, plot().  The other would be to use a bunch       !
+! of IF statements.  I like the first approach better, especially as it would allow easier    !
+! development route, as I can get keywords working for just one subroutine first -- plot().   !
+! That sounds good.  Therefore:                                                               !
+!                                                                                             !
+! Step (1) : When 'plot' is called, read in required info using keywords before calling       !
+! plot() itself. Allow plot() to reread if need be.                                           !
+! NOTE THAT AT PRESENT IT IS IN FLUX AND WILL NOT COMPILE                                     !
+! NEED TO NOW: Write little subroutines that will do 'small' jobs; for example, get the initw !
+!---------------------------------------------------------------------------------------------!
+! June  10 2009: Allow choice of potential type? No, this will be left until later, but       !
+! now, we will work on putting in the .... keyword stuff .... scary....                       !
+! zmc_version_2_June10_2009.f90 is LAST version before keyword stuff tackled...               !
+!---------------------------------------------------------------------------------------------!
+! April 03 2009: Despite not having the keywords, I am putting in the plotting option         !
+! since I intend to incorporate it anyway.  There will be some double handling but not        !
+! too much, since the subroutine can be defined an put in place and the keyword stuff         !
+! can come in when I introduce a subroutine 'between' plot() and the main body which does     !
+! the job of extracting the required information via the keyword file.  This later version    !
+! will have one change -- it will be able to plot when no contact file is indicated, but will !
+! not give the user the options to do with plotting contact vectors.                          !
+! Plus plot() does not use error checking etc.                                                !
+! Put simple error checking into plot(), leaving the basic behaviour alone.  Seems OK.        !
+!---------------------------------------------------------------------------------------------!
+! April 01 2009: Putting values on command line for reread (to allow read in from             !
+! different filename to output) and summary (to allow inline or to file), and before          !
+! that, implementing --summary at all.                                                        !
+! Next, looking at how to cut off extension and add on a new one.  Maybe even have            !
+! a little subroutine to do it; extension(filename,ext).  What it will do is read             !
+! backwards through a filename until it encounters a full stop, then cut off the bit          !
+! after the full stop and add on the desired extension.  If no full stop is encountered,      !
+! then add the extension to the end of filename...seems to work...                            !
+! So use extension() in other subroutines where we want new extensions.                       !
+!                                                                                             !
+! Remove stuff to do with those kludgy switches in the masterfile.                            !
+!                                                                                             !
+! I would like to:`                                                                           !
+! Put in plotting as a subroutine.  Allow plotting without a contact vector list (test if     !
+! conmol() is non-zero and refuse to plot vectors if it is).                                  !
+! Also, need to make sure that what is required for plot is what is read in -- since this     !
+! is probably best done by interrogating the input file specifically for what is needed,      !
+! will have to wait for sorting out use of keywords.  Similarly for incorporating             !
+! searching for contact vectors.  Keyword stuff should be ideal for this, but have to         !
+! get it working.                                                                             !
+! How will it work?  Command line switch would be --plot, then there would be options in      !
+! the input file on top of the ones there currently.  Policy question: Is plotting            !
+! mutually exclusive with doing MC? I think so, yes.  Will proceed on that assumption for     !
+! now.  That means that if --plot is one the command line, we ignore ALL OTHER OPTIONS.       !
+! EXCEPT --help and --help2 and --version, which are grouped at the front and followed by     !
+! STOP so you can pull back the command, add --help or whatever and get the info without      !
+! running a whole simulation.  Apart from that:                                               !
+! If --getcontact goes one the command line, we ignore anything BUT --plot.  This is easy     !
+! to implement -- we look for --plot first, then for --getcontact and end both subroutines    !
+! with STOP.                                                                                  !
+! Additional keywords or options will have to be defined.  For --plot I think the current     !
+! naming convention works well enough.  Need to tell it if we want contacts plotted, if so    !
+! one per plot or subset on one plot, if so to label or not... is there a reason plotting     !
+! cannot be interactive? I don't think so.  So why not keep it as is and just put it into a   !
+! subroutine?  Only chance I would make is the following: When selecting how many vectors to  !
+! plot, a negative number will plot all, just to short-cut having to enter 1 2 3 4...N.       !
+!                                                                                             !
+! For --getcontacts I think we need options in the input file; these can be the same fields   !
+! as in the atoms_to_use file.  Only complexity could be that we might specify several        !
+! length ranges and atom numbers at once...no, leave it as is...so extra keywords will be:    !
+! LENGTHRANGE, ATOMS (usage: ATOMS zmat_label n1, n2...nN), NEWCONTACTFILE.                   !
+! I don't feel up to modifying readat to fit in with this new way of doing things as yet...   !
+! Anyway, may as well wait until the new inputfiles are working...                            !
+! Anyway, add --plot and --getcontacts to command line options...                             !
+!---------------------------------------------------------------------------------------------!
+! September 23b 2008: Changing cif file bit to number atoms sequentially.                     !
+! Now, next we need to be able to read in the filename from reread=filename,                  !
+! and to cut off suffixes and add the desired suffixes in the other subroutines.              !
+! Then there is the reorganisation of the input files, including keywords...                  !
+! Also, allow contacts to be grouped with a particular sprcon, like the internals do already. !
+! Also need to get outfile off the command line.                                              !
+! Also the following command line args do not work:                                           !
+!---------------------------------------------------------------------------------------------!
+! September 23 2008: added in --quiet option.  Also done --version and --help (easy ones)     !
+!                             --corra --corro --cartst --cartsn --fracs --pairs --energy      !
+! Must rewrite the bit that constructs the new filenames at some time.                        !
+! For the output stuff, I need a good way of cutting off the extension if there is one and    !
+! adding on the extension I want.  It is easy to add a bit onto the front of the filename...  !
+!---------------------------------------------------------------------------------------------!
+! September 19 2008 Fixed that stuff, now command line args/options.  Big change...           !
+!---------------------------------------------------------------------------------------------!
+! September 18 2008 Now allocation stuff throws lots of bugs on ifc compiler, so more         !
+! changes to global vs local variables.  Also, try not to use allocate() inside MC loop       !
+!---------------------------------------------------------------------------------------------!
+! September 17 2008 (continued) done error trapping memory allocation.  Now cutting out       !
+! stuff made redundant by dynamic allocation. Stream 17 is gone.                              !
+!                                                                                             !
+! Key to do now is command line args and help screen(s). See Aug 19 2008 for comments.        !
+! And getting rid of need to master file.  Keyword input files? CELL, CRYSTAL, ZMAT, QXYZ...  !
+! Grouping of contact vectors in MC params file.                                              !
+!---------------------------------------------------------------------------------------------!
+! September 17 2008:  Continuing dynamic allocation.  Not yet putting in error trapping --    !
+! that is a next step.                                                                        !
+!                                                                                             !
+! initw inwidths incrystal quatern, qcrystal                                                  !
+!                                                                                             !
+! Now do the ones local to different subroutines.  Start at the back.                         !
+! calc_uij_new peanut get_info etc.                                                           !
+! Problem in peanut()                                                                         !
+! Should also sort out that bit of code that writes out to stream 17                          !
+!---------------------------------------------------------------------------------------------!
+! September 16 2008:  Continuing dynamic allocation.  Not yet putting in error trapping --    !
+! that is a next step. Also need to reformat output from get_info() to make it more           !
+! compiler independent, and friendlier to plotting -- and automatically send to file          !
+! Actually  not auto to file -- that gives option to put output in the overall outfile        !
+!                                                                                             !
+! allocate conmol                                                                             !
+! allocate da,db,dc,dz,dm,ty,oat,dat,dl                                                       !
+! allocate intern                                                                             !
+! allocate wrap                                                                               !
+! allocate insprtype                                                                          !
+! integer,dimension(amax,bmax,cmax,loc_max):: zocc,mocc                                       !
+! crosstype    cross_terms   translate   xyzcrystal  carts                                    !
+! initw inwidths incrystal quatern, qcrystal                                                  !
+!---------------------------------------------------------------------------------------------!
+! September 15 2008:  Continue error checking and redesign to use new quaternion files        !
+!                                                                                             !
+!1   1     1     1 -0.472453 -0.132532  0.071452  0.868400 F  -0.000001  -0.000001  -0.000001 !
+!2   2     1     1 -0.071452  0.868400 -0.472453  0.132532 F   4.009501   2.787999   0.000001 !
+!                                                                                             !
+!site  location  zmatrix  instance                                                            !
+!                                                                                             !
+! Then... command line flag implementation!                                                   !
+! But cannot get it to work on g95 on Mac (works OK on ifc on Linux) 'bus error'              !
+! So comment this out and start making stuff allocatable.                                     !
+! See: file://localhost/Users/darren/Desktop/UsefulFiles/ForMan/ch2-16.html                   !
+! start off trying num_at() and nintern()                                                     !
+! By end of day, have made all one dimensional arrays dynamically allocated except those      !
+! local to readfiles(), get_energy(), get_info() and incupdate()                              !
+! Note that what I have done may well need to be adjusted when input files are remodelled...  !
+!---------------------------------------------------------------------------------------------!
+! September 14 2008: Up to line 2115 in MCread().  Will do even though it will be redesigned  !
+! on the grounds that I don't want to make too many changes at once.                          !
+!---------------------------------------------------------------------------------------------!
+! September 13 2008: Adding more error checking.  How to error  check Aidan's zmat read in?   !
+! Error checking done on readfiles(), getcon().  Next should be MCread()                      !
+!---------------------------------------------------------------------------------------------!
+! September 12 2008: Next job is the switch to command line args instead of all those         !
+! y/n flags in the master file.  And lots more error trapping. Allow comments in getcon()     !
+! The error trapping just needs iostat=ivar in the read statements.                           !
+! See getcon() and readcrystal() for examples.                                                !
+!---------------------------------------------------------------------------------------------!
+! September 11 2008: Testing the idea of using 'contains' to avoid having to pass lots of big !
+! arrays around.  If definition is identical in main and subroutine, can treat as global...   !
+! Test using the carts array...seems to work.  Note sure how the 'implicit' stuff works...    !
+! then: zocc(), mocc(),  xyzcrystal(), qcrystal(), incrystal(), simsize(), conmol()           !
+! total_num_zm, num_loc, num_at, da,db,dc,dl,dz,dm,oat,ty,length, sprcon, insprcon, zmat      !
+! nintern, ntyp, ninspr,wrap, intern, insprtype, celltrans,crosstype,cross_terms,ncross       !
+! size_effect , cellpar,  quatern, translate                                                  !
+!---------------------------------------------------------------------------------------------!
+! August 19 2008; Continuing to fix Uij routine; seems to be fixed on proviso that there are  !
+! fewer than 10 zmats, fewer than 10 orientations per location and fewer than 10 locations    !
+! Also, have redesigned it to ONLY put out cif file -- rest of output is useless anyway...    !
+! Tidied up pairs().  Seems pretty much OK as it is.                                          !
+! Tidied up peanut(), and removed optional file output (as if you would want anything else)   !
+! it would be good to figure out how to use the colour of the points on the gnuplot plot to   !
+! encode the sign of the correlation.                                                         !
+! NOTE that I have NOT put lots of error checking into these                                  !
+! General tidy up of code before next actual syntactic change.                                !
+! Next job is to sort out book-keeping of what quaternion goes where.                         !
+! This has I think been done, by modifying readfiles() and the format of varfile              !
+! NOTE THAT THIS BREAKS COMPATIBILITY WITH OLD VERSION -- MEANS WE NEED TO MAKE NEW READAT    !
+! AND GENCONTACTS AND PLOT PROGRAMS...                                                        !
+! Next job is to put the geometry and contact vector file names as the first two lines        !
+! in the MC params file, then read the MC file in from the command line.                      !
+! This means also sorting out reading in the output diagnostic stuff flags from command line. !
+! May want Aidan's help with this.                                                            !
+!                                                                                             !
+! In Summary:                                                                                 !
+!                                                                                             !
+! ./ZMC MCfile.inp cryst.out <options>                                                        !
+!                                                                                             !
+! Options are:                                                                                !
+!               --cif  (output to cryst.cif)                                                  !
+!               --summary  (histograms etc, output to cryst.sum)                              !
+!               --pairs (output to pairs_..._cryst.out)                                       !
+!               --fracs (output to cryst.frc)                                                 !
+!               --cartsnotrans (output to cryst.cnt)                                          !
+!               --cartstrans (output to cryst.ctr)                                            !
+!               --readcryst filename.dat (read crystal in from filename.dat.                  !
+!                                         Can be the same name as cryst.out)                  !
+!                                         If this is so, print warning.)                      !
+!               --corro (peanuts using origin atom, output to r_??_o_etc)                     !
+!               --corra (peanuts using average atom posn, output to r_??_a_etc)               !
+!               --molenergy (output molecular energies to cryst.ngy)                          !
+!               --help (output this information)                                              !
+!                                                                                             !
+! Also possibly --corrfield (Eric's correlation field subroutine)                             !
+!               --longhelp (put out a manual of a sort)                                       !
+!               --verbose or --quiet (reduce amount of output to screen)
+!                                                                                             !
+! The --help option(s) would be the only ones that do no need MCfile.inp and cryst.out        !
+!---------------------------------------------------------------------------------------------!
+! August 18 2008; Started on the Biso routine.  The new routine seems to work, yet Mercury    !
+! does not look right.  The question is where the error lies.  If I only put molecule 2 into  !
+! the cif file, it looks right; if I only put 1 in it looks right; but if I put both in, the  !
+! the second one does not work -- regardless of which one is put in second.  Hence it looks   !
+! like Mercury is applying the Uij for the first listed molecule to the second as well, and   !
+! since it is in P 1, there is no symmetry applied just a translation, so it does not work    !
+! out right.  But based on the behaviour outlined, the numbers calculated are correct -- so   !
+! what is wrong must lie in Mercury; so I need to find another program that can view a cif    !
+! file with its Uij.  Probably should also look at definition of cif to see if I can force    !
+! Mercury (or any other program) to read the Uij for a molecule from THAT molecule.           !
+! OTHER option would be to use some other format -- pdb? res?                                 !
+! SOLUTION!!!! Atoms with different Uij must have unique labels.  Q: How many characters      !
+! is a label allowed to have?  Given we have zmat num, location num, orientation num, that    !
+! could require as many as 3 chars on the end of what could be a 4 char label.  Answer        !
+! could be to lop of anything after the atom symbol and just bung on an ordinal atom number   !
+! across the whole unit cell.  That would work OK.  To lop off, simplest possible would be    !
+! to take first two chars if there are two chars (don't bother truncating H1, just use the 1) !
+! or the first char if there is only one, then write onto it with no space the ordinal atom   !
+! number.  Could attribute a number to each unique molecule (would need some working out      !
+! and not quite as simple).                                                                   !
+! Best solution; since ordinal atom number could easily reach three digits, but num_loc,      !
+! num_zm and num_mol are unlikely to do so, could concatenate these three numbers and add to  !
+! the first two chars of atom label (first 1 char if 1 char label).                           !
+! NEED TO PUT IN IF TO JUST USE 1 CHAR IF THAT IS ALL WE HAVE.                                !
+!---------------------------------------------------------------------------------------------!
+! August 5 2008; starting the long process of producing a next version.  The things that I    !
+! intend to change are discussed in the document 'ZMCNOTES.tex' and I will not reproduce the  !
+! list here, except as far as noting the changes as they happen.  The new version of the      !
+! program has source code file name 'zmc_version_2_Aug5_2008.f90' with the date to be kept    !
+! up to date.  There are many things needing to be done, from small fixes to significant      !
+! redesign.  I'll start with some small fixes.                                                !
+!---------------------------------------------------------------------------------------------!
+! Program history in reverse chronological order:    program is occ_MC.f90 (and 'refinements')!
+! its purpose is to do MC simulation on flexible molecular systems WITH occupancies           !
+! Cobbled together by D. J. Goossens, goossens@rsc.anu.edu.au                                 !
+!---------------------------------------------------------------------------------------------!
+! Feb 07 HARDWIRED changes to make it work as ptp 6th try see logbook pg 135                  !
+!---------------------------------------------------------------------------------------------!
+! Nov 03 2006: I think it is fixed, but it needs substantial testing.                         !
+!              (NOTE -- it proved NOT to be fixed...)                                         !
+!---------------------------------------------------------------------------------------------!
+! Nov 02 2006: Started to fix Uij problem.                                                    !
+!---------------------------------------------------------------------------------------------!
+! Nov 02 2006: Calculation of Uij and therefore output of the .cif file is flawed.  Biso      !
+! is OK, but could be better.  Do not use until fixed up.                                     !
+!---------------------------------------------------------------------------------------------!
+! Sept 28 2006: Putting in more checking of the sizes of arrays.  Number of molecules of a    !
+! particular z-matrix on a particular location does not seem to be tested for. mol_max        !
+!---------------------------------------------------------------------------------------------!
+! Sept 19 2006: Using read_buffer() to allow use of a comment character in the input          !
+! files to make the program more self-documenting.   Start by modifying various routines      !
+! that read stuff in -- MCread() for example.  NOTE that this will need a modified            !
+! readat as well.   DO NOT put comments in the contact vector list file.                      !
+!---------------------------------------------------------------------------------------------!
+! Sept 12 2006: Incupdate modified unsuccessfully.  Have to try something else...             !
+! Make iacc, iup and irej arrays indexed by zmatrix?  Well, try it... looks OK...             !
+! So now the fourth line in the .master file looks like this:                                 !
+!                                                                                             !
+! reread,switch_get_info,switch_cart,switch_frac,switch_corr,switch_pairs,switch_uij,switch_writeE
+!                                                                                             !
+! and they call (in order) readcrystal(), get_info(),write_xyz(),write_frac(),peanut(),       !
+! pairs(),calc_uij()...switch_writeE does not call a subroutine but runs a loop.              !
+!                                                                                             !
+! which means the fourth row of the .master file will consist of 8 y or n characters to       !
+! turn these things off or on.                                                                !
+! Note that some of these subroutines require INTERACTIVE input and so will STOP anything     !
+! automated.  This should be rectified at some point.                                         !
+! Ones that DO require interactive input are: get_info(),write_xyz(),peanut(),calc_uij()      !
+!                                                                                             !
+!  This source code file is now called:                                                       !
+!  occ_MC_diag_cross_readin_xyz_r_Uij_contains_pairs_writeout.f90                             !
+!  but today it is renamed to occ_MC_2006.f90 for conciseness.  This is to form the root of   !
+!  all future implementations.                                                                !
+!---------------------------------------------------------------------------------------------!
+! Sept 08 2006: Incupdate modified to allow for z-matrices that occur rarely.  Response to    !
+! bug helpfully pointed out by Andrew Beasley.                                                !
+!---------------------------------------------------------------------------------------------!
+! Aug 16 2006: Can we put out the molecule's energy at the end of the output file?            !
+! It would be easier to do it separately at the end of the last MC loop.                      !
+! See occurrences of 'switch_writeE' in the program.                                          !
+!---------------------------------------------------------------------------------------------!
+! June30 2006: Add in 'pairs' subroutine to extract variables describing pairs of molecules   !
+! linked by each contact vector.  Based on the peanut subroutine.                             !
+!---------------------------------------------------------------------------------------------!
+! June16 2006: Shift subroutines to be 'contained' in main.  Better for error checking.       !
+!---------------------------------------------------------------------------------------------!
+! June16 2006: Write version to calculate Uij -- version for Uii never existed...             !
+! Outputs to a .cif file which can be read in by Mercury.  Has not as yet been tested on      !
+! other crystal drawing software.                                                             !
+!---------------------------------------------------------------------------------------------!
+! June15 2006: General tidy up and change reread flag to the first flag in the fourth         !
+! row of the master file.  Still overwrites the old file!!!!!                                 !
+! IMPORTANT:  Fixed a bug in the get_info() and probably in peanut().                         !
+! Version with Uii in the title will have diagonal Uij components calculated in it some time. !
+!---------------------------------------------------------------------------------------------!
+! June14 2006: Correlation diagram subroutine peanut() added.                                 !
+! Outputs files ready to be plotted with gnuplot.                                             !
+!---------------------------------------------------------------------------------------------!
+! June13 2006: Add in the option to output fractional and Cartesian coordinates at the end    !
+! of a run.  Creates the files 'carts_outname' and 'fracs_outname' if a flag is set in the    !
+! .master file (fourth line of file, row of y or n).   They are:                              !
+! Output:   Histograms    Carts    Fracs    correlation diagrams    connected pairs    Uijs   !
+! Subrtne:  get_info    write_xyz   write_frac        TBA              TBA              TBA   !
+!                                                                                             !
+!        What this means:                                                                     !
+! 1. Histograms:  Output to screen histograms for each variable used to describe a            !
+!    molecule: xyz, q1,q2,q3,q4,internals, plus give the range, average and std. dev, of each.!
+!                                                                                             !
+! 2. Carts/Fracs:  Put out Cartesian and/or Fractional coordinates for EVERY atom in the      !
+!    simulation. MIGHT add options to this to select certain atoms or only use a fraction of  !
+!    the crystal. Would do this simply by making it interactive.  (y/n questions).            !
+!                                                                                             !
+! 3. These are the 'peanut' shaped diagrams as in the 33'DMOB paper.                          !
+!    Subroutine does not yet exist.                                                           !
+!                                                                                             !
+! 4. Look at correlations in the variables describing pairs of molecules separated by each    !
+!    contact vector.  At first use on x, q and i.                                             !
+!    Subroutine does not yet exist.                                                           !
+!                                                                                             !
+! 5. Calculate the anisotropic atomic displacement parameters for each atom in the            !
+!    simulation for comparison with single crystal studies.                                   !
+!    Subroutine does not yet exist.                                                           !
+!                                                                                             !
+!    This all means some of these subroutines will require INTERACTIVE INPUT, which would     !
+!    hold up a script.                                                                        !
+!---------------------------------------------------------------------------------------------!
+! June13 2006: Add in the capability to read in the output file from a previous simulation    !
+! and continue the simulation.  To keep it simple, program will expect to read in the output  !
+! file if its name begins with 'reread'.  E.G. reread_ibuprofen.out or rereadabcABCdefDEF.    !
+! You'll still need a full set of input files including initial variable increments;          !
+! that is just to make my job easier, I'm afraid...  NOTE: reread file will be overwritten!!!!!
+! Note also: Text must be at start of filename and must be all lower case letters.            !
+!---------------------------------------------------------------------------------------------!
+! May22 2006: Add in the capability to look at cross-terms in the internals; at the moment    !
+! just the interaction of two internals at a time...  This implies changes to the inputfile   !
+! containing the MC parameters and to the energy calculation function, including passing      !
+! yet more arrays back and forth.   Also, you now specify B_aim in the input file             !
+!---------------------------------------------------------------------------------------------!
+! March22 2006; Add in a diagnostic module to see if the size effect stuff is really          !
+! having any effect on contact lengths and if so what?                                        !
+! Write out some lengths once the MC simulation is ended...                                   !
+! Use a derivative of the energy calculation routine.                                         !
+!---------------------------------------------------------------------------------------------!
+! Oct 16 2005: Fixed a problem with definition of insprtype, only a                           !
+! problem when in_max > inspr_max                                                             !
+!---------------------------------------------------------------------------------------------!
+! Sept 16 2005: Some more error checking to neaten things up...                               !
+!---------------------------------------------------------------------------------------------!
+! July 08; Put in a check to make sure con_max is big enough and warn if not.                 !
+!---------------------------------------------------------------------------------------------!
+! May 19th; Change looping construct and change B-adjust to be more generally applicable.     !
+! Then started making the documentation more complete and correct, that is the documentation  !
+! within the code.  Also try to weed out unused but declared variables.                       !
+!---------------------------------------------------------------------------------------------!
+! May 16th; Replaced TGS-related z-mats and qxyzs and in the process made gencontact.f90,     !
+! which should be useful for generating lists of possible contacts in the right format...     !
+! the program is possibly working; long test o/night                                          !
+!---------------------------------------------------------------------------------------------!
+! May 12th; Still going, also changed incupdate to allow for non-altered variable increments--!
+!---------------------------------------------------------------------------------------------!
+! May 10th; heavily rejigging (already) to fix stupidities in the book-keeping...-------------!
+!---------------------------------------------------------------------------------------------!
+!  May 05 2005: Continuing modifications.  So far so good, but need to do copious             !
+!  checks.  Then will put lots of comments through document and then produce a                !
+!  readat.  This may well be more difficult than rejigging the Monte Carlo...                 !
+!  Also writing a utility to extract comments from code (crude version of self-documentation) !
+!  It is intended to extract any line beginning with !cc and then ensuing lines down to the   !
+!  line beginning with the same in CAPS. This will allow bits of code as well as comments to  !
+!  be extracted.                                                                              !
+!---------------------------------------------------------------------------------------------!
+!  May 03 2005: Trying to make a 'canonical' program which can do occupancies                 !
+!  This is major surgery and there may be no survivors.                                       !
+!  First thing is to modify readfiles() to read in the occupancy information                  !
+!  This also requires modifying other arrays; a key thing is that we will be using a          !
+!  'location' dimension, where a location is a region of the unit cell which is occupied by   !
+!  only one object, even if there are more than one object which might occupy it.  The word   !
+!  location is used to avoid the pre-existing meaning of words like site and position...      !
+!  replace numat with num_at for consistency.  First modify readfiles and get it to read in   !
+!  the new file formats and then STOP.                                                        !
+!  The main modification to MC read is that it reads in the size effect parameters.           !
+!  And that we have a separate number for how often to run B-adjust                           !
+!---------------------------------------------------------------------------------------------!
+!  Oct18 2004: Output final increments if increments adjusted                                 !
+!---------------------------------------------------------------------------------------------!
+!  Oct8 2004: Attempt to produce a better version without hardwiring: 'canonical'             !
+! includes sorting out numat and removing v_min and v_max                                     !
+! This should form the basis of all future versions.                                          !
+!---------------------------------------------------------------------------------------------!
+!  Oct7 2004: Modify to use with TGS   NOTE numat() is still HARDWIRED                        !
+!---------------------------------------------------------------------------------------------!
+!  Mar27 2004: Putting dynamic adjustment of increments in following benzil program           !
+!---------------------------------------------------------------------------------------------!
+!  Feb20 2004: Rename for use with HMTA with motif. NOTE numat() is still HARDWIRED           !
+!---------------------------------------------------------------------------------------------!
+!  Jan 12 2004: NOTE that were are using the size command in an invalid way!!!!(fixed)     !!!!
+!---------------------------------------------------------------------------------------------!
+!  Jan 12 2004: now use call copy(zmcopy,zmorig) to copy and call delete(zm) to remove copy   !
+!---------------------------------------------------------------------------------------------!
+!  Jan 09 2004: Wilson notes that there is a problem with the z-matrix getting rewritten due  !
+!  to it being a pointer rather than an array.  Aidan has to fix.  I am testing my program and!
+! changing if needs be.  E calc of whole crystal is commented out for now.                    !
+!---------------------------------------------------------------------------------------------!
+!  Dec 17/2003: Darren Goossens   r-0.5 instead of r-1.0 in replinternal                      !
+!---------------------------------------------------------------------------------------------!
+!  Dec 17/2003: Darren Goossens                                                               !
+! Comment out variable adjust but add in calc of E of whole crystal and some histograms of    !
+! Some variables in the simulation !!!HARDWIRED!!!! 33benzil_int_acc_adj_E.f90  `             !
+!---------------------------------------------------------------------------------------------!
+!  Dec 04/2003: Darren Goossens                                                               !
+! Dynamically adjust the variable increments to get 50% rejection ratio.                      !
+! This file is now called 33benzil_int_acc_adj.f90                                            !
+!---------------------------------------------------------------------------------------------!
+!  Dec 02/2003: Darren Goossens                                                               !
+!  Get acc/up/rej as a function of variable increments.                                       !
+!---------------------------------------------------------------------------------------------!
+!  Oct 22 2003: Darren Goossens                                                               !
+!  Putting on internal sprcon (torsional) and making sure widths etc have a zm dimension      !
+!---------------------------------------------------------------------------------------------!
+! August 14, 2003: Darren Goossens                                                            !
+! 33dimethoxybenzil MC program as at 1:00 pm, some annotations added and some bug fixes       !
+!---------------------------------------------------------------------------------------------!
+!August 12, 2003: Darren Goossens                                                             !
+! 33dimethoxybenzil MC program as at 1:00 pm.  Needs to be tested for run-time errors         !
+!---------------------------------------------------------------------------------------------!
+!August 11, 2003: Darren Goossens                                                             !
+! 33dimethoxybenzil MC program as at 5:00 pm.  Unfinished                                     !
+!---------------------------------------------------------------------------------------------!
+!August 7, 2003: Darren Goossens                                                              !
+!  Start on turning the contact plotting program into an MC program.                          !
+! In the getcarts subroutine,                                                                 !
+!          NOTE that shiftvec is commented out, UNLIKE in the contact vector calculation      !
+!---------------------------------------------------------------------------------------------!
+!August 5, 2003: Darren Goossens                                                              !
+!Start on contact plotting program using contacts33benz.f90 as a basis.  Also use TRW's       !
+!ps_routines, since I have some familiarity. And some code from my own plotcarts.f            !
+!  --------------------------------------------------------------------------------------     !
+!August 4, 2003: Darren Goossens                                                              !
+!Write contacts33benz.f90 to contacts22benz_bak.f90 and start modifying contacts33benz.f90    !
+!to incorporate some sorting of contact vectors.  Sort by which mol. they start from, which   !
+!they go to and which rotating fragment of the molecule they go from/to.                      !
+!  ----------------------------------------------------------------------------------------   !
+!July 30, 2003.  Darren Goossens                                                              !
+!This is a butchered version of Aidan's z-matrix-handling test program benzil.test.           !
+!Whereas that program was to read in a mol2 and generate the quaternions, origin translations !
+!and z-matrix for 33dimethoxy benzil, this program is to read in the z-matrix and various     !
+!information and replicate the molecules through space and work out a plausible set of contact!
+!vectors.  It will also therefore form the basis of an MC program.                            !
+!---------------------------------------------------------------------------------------------!
+!Program history in reverse chronological order, END                                          !
+!---------------------------------------------------------------------------------------------!
