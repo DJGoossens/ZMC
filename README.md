@@ -17,29 +17,34 @@ This means that analysis of diffuse scattering requires different tools from ana
 Current status
 --------------
 
-Some changes to gfortran broke the program due to some non-robust code in managing things like variable length strings and hash tables. I think gfrotran just tighened up a bit and some undefined behaviour got defined in a way that did not suit the program. This has been rectified and it now (March 2026) compiles and runs. Having said that, it has not been exhaustively tested, so there may be routins that my tests have not accessed that are still noncompliant. Sorry.
+Some changes to gfortran broke the program due to some non-robust code in managing things like variable length strings and hash tables. I think gfortran just tighened up a bit and some undefined behaviour got defined in a way that did not suit the program. This has been rectified and it now (March 2026) compiles and runs. Having said that, it has not been exhaustively tested, so there may be routines that my tests have not accessed that are still noncompliant. Sorry.
 
 This archve (see Releases) contains Linux X86_64 (AMD64) binaries compiled on Debian 13. The program has successfully been compiled and run using gfortran on:
-* Linux on x86_64 (Debian 13)
+* Debian 13 on x86_64
 * Cygwin on Windows 10 and Windows 11
 * MSYS2 on Windows 10
-* Linux (Debian 13) inside WSL2 on Windows 11.
+* Debian 13 inside WSL2 on Windows 11
+* Haiku OS (Shredder) on x86_64.
 
-I can report that all of MSYS2, Cygwin and WSL2 give very similar performance. THe advantage of WSL is that it ought to run the binaries in the Release without recompiling.
+I can report that all of MSYS2, Cygwin and WSL2 give very similar performance for the same underlying hardware. The advantage of WSL is that it ought to run the binaries in the Release without recompiling.
 
-I expect it to compile everywhere gfortran runs. There is not a compile script for non-bash-type shells, but converting it to a Windows BAT file would not be hard.
+I expect it to compile everywhere gfortran runs. There is not a compile script for non-bash-type shells, but converting it to a Windows BAT file would not be hard. See compile_all_Linux_gfortran.sh. There is no Makefile.
 
-It also compiles and runs on 32-bit Debian on x86, Debian 'armel', 64-bit Haiku OS (Shredder) on x86_64 and 64-bit Linux on DEC Alpha 21164 (EV56) (Debian 14 'sid/forky'). These were just run on various old bits of hardware I have accumulated to see if new errors arose.
+It also compiles and runs on 32-bit Debian on x86 (very old Compaq laptop), Debian 'armel' (old Raspberry Pi) and 64-bit Linux on an ancient DEC Alpha 21164 (EV56) (Debian 14 'sid/forky'). These were just tests if new errors arose. So far, none that matter.
 
 Relevant links
 --------------
 
-An article from 2015 that goes into significant detail about how to set up a simulation. 
+An article from 2015 that goes into significant detail about how to set up a simulation can be found at:
 
 https://doi.org/10.1155/2015/878463
 
+and
+
 https://onlinelibrary.wiley.com/doi/10.1155/2015/878463
 
-The simulation that was included with that simulation (also uploaded here):
+The simulation that was included with that publication and all the associated code and a document to explain it can be found at:
 
 https://onlinelibrary.wiley.com/action/downloadSupplement?doi=10.1155%2F2015%2F878463&file=acmp878463-sup-0002-f2.zip
+
+This ZIP file has also been added to this github archive. See acmp878463-sup-0002-f2.zip.
