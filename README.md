@@ -17,7 +17,19 @@ This means that analysis of diffuse scattering requires different tools from ana
 Current status
 --------------
 
-I have some old binaries that seem to work on Windows and Linux, and I want to test them before I post them. The code is so old that some changes to gfortran mean a key module no longer compiles. I was hoping to fix that before I uploaded, but I might upload anyway. It compiles on older versions of the compiler (circa 2016), bit no longer.
+Some changes to gfortran broke the program due to some non-robust code in managing things like variable length strings and hash tables. I think gfrotran just tighened up a bit and some undefined behaviour got defined in a way that did not suit the program. This has been rectified and it now (March 2026) compiles and runs. Having said that, it has not been exhaustively tested, so there may be routins that my tests have not accessed that are still noncompliant. Sorry.
+
+This archve (see Releases) contains Linux X86_64 (AMD64) binaries compiled on Debian 13. The program has successfully been compiled and run using gfortran on:
+* Linux on x86_64 (Debian 13)
+* Cygwin on Windows 10 and Windows 11
+* MSYS2 on Windows 10
+* Linux (Debian 13) inside WSL2 on Windows 11.
+
+I can report that all of MSYS2, Cygwin and WSL2 give very similar performance. THe advantage of WSL is that it ought to run the binaries in the Release without recompiling.
+
+I expect it to compile everywhere gfortran runs. There is not a compile script for non-bash-type shells, but converting it to a Windows BAT file would not be hard.
+
+It also compiles and runs on 32-bit Debian on x86, Debian 'armel', 64-bit Haiku OS (Shredder) on x86_64 and 64-bit Linux on DEC Alpha 21164 (EV56) (Debian 14 'sid/forky'). These were just run on various old bits of hardware I have accumulated to see if new errors arose.
 
 Relevant links
 --------------
