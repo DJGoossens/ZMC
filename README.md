@@ -19,4 +19,15 @@ Current status
 
 I have some old binaries that seem to work on Windows and Linux, and I want to test them before I post them. The code is so old that some changes to gfortran mean a key module no longer compiles. I was hoping to fix that before I uploaded, but I might upload anyway. It compiles on older versions of the compiler (circa 2016), bit no longer.
 
-**More to come**
+Relevant links
+--------------
+
+An article from 2015 that goes into significant detail about how to set up a simulation. 
+
+https://doi.org/10.1155/2015/878463
+
+https://onlinelibrary.wiley.com/doi/10.1155/2015/878463
+
+The simulation that was included with that simulation (also uploaded here):
+
+https://onlinelibrary.wiley.com/action/downloadSupplement?doi=10.1155%2F2015%2F878463&file=acmp878463-sup-0002-f2.zip
