@@ -21,7 +21,7 @@ All use should reference the paper:
  Program ZMC' Metallurgical and Materials Transactions A, vol 42A, 
  (2011) 23-31.  DOI:10.1007/s11661-010-0199-1
 
-Program was modified in 2026 to get it to comile and run under the then-current
+Program was modified in 2026 to get it to compile and run under the then-current
 version of gfortran:
 
 GNU Fortran (Debian 14.2.0-19) 14.2.0
@@ -48,7 +48,9 @@ darren.goossens@gmail.com
 
 ./compile_all_Linux_gfortran.sh
 
-and away you go.
+and away you go. You may need to make the script executable first:
+
+chmod +x compile_all_Linux_gfortran.sh
 
 ----------------------------------------------------------------------------
 (2) Installation
