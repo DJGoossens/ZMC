@@ -2,9 +2,9 @@
 ZMC, source distribution, README.1ST
 
 (1) Introduction
-(1a) Compiling
-(2) Installation
-(3) Running
+(2) Compiling
+(3) Installing
+(4) Running
 ----------------------------------------------------------------------------
 (1) Introduction
 
@@ -44,7 +44,7 @@ darren.goossens@gmail.com
 07 March 2026
 
 ----------------------------------------------------------------------------
-(1a) Compiling
+(2) Compiling
 
 ./compile_all_Linux_gfortran.sh
 
@@ -53,7 +53,7 @@ and away you go. You may need to make the script executable first:
 chmod +x compile_all_Linux_gfortran.sh
 
 ----------------------------------------------------------------------------
-(2) Installation
+(3) Installing
 
 Copy all the executable files into a subdirectory and put the subdirectory
 in your path.  Run the program from the system prompt.
@@ -61,7 +61,7 @@ in your path.  Run the program from the system prompt.
 That is it.
 
 ----------------------------------------------------------------------------
-(3) Running
+(4) Running
 
 In the archive, you should find a /Simple_Simn directory.  It contains all the 
 files you need to run a very simple simulation, then calculate the diffuse
